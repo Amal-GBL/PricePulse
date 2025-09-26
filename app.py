@@ -1,10 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, send_file, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify
 import glob
 import os
 import csv
 import json
 from datetime import datetime
 import subprocess
+import time
+import hmac
+import hashlib
 
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +44,6 @@ def load_products(csv_path):
     with open(csv_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # Ensure numeric-like fields remain strings for display; cast later when needed
             products.append({
                 "name": row.get("name", ""),
                 "current_price": row.get("current_price", ""),
@@ -71,10 +73,6 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", "change-this-secret")
 
 
-def is_unlocked() -> bool:
-    return bool(session.get("bench_unlocked"))
-
-
 def build_view_model(platform='blinkit'):
     csv_path = find_latest_csv(platform)
     products = load_products(csv_path)
@@ -82,7 +80,6 @@ def build_view_model(platform='blinkit'):
     for p in products:
         key = p["name"]
         p["benchmark_price"] = benchmarks.get(key, "")
-        # Compute status and diff
         status = ""
         diff = ""
         cur = p.get("current_price")
@@ -101,53 +98,64 @@ def build_view_model(platform='blinkit'):
     return products, updated_at, os.path.basename(csv_path) if csv_path else None, platform
 
 
+def _sign(platform: str, ts: int) -> str:
+    msg = f"{ADMIN_KEY}|{platform}|{ts}".encode("utf-8")
+    key = (app.secret_key or "").encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+def _verify_token(platform: str, ts_str: str, sig: str, max_age_sec: int = 600) -> bool:
+    try:
+        ts = int(ts_str)
+    except Exception:
+        return False
+    if abs(time.time() - ts) > max_age_sec:
+        return False
+    expected = _sign(platform, ts)
+    try:
+        return hmac.compare_digest(expected, sig or "")
+    except Exception:
+        return False
+
+
 @app.route("/")
 def index():
     platform = request.args.get('platform', 'blinkit')
     products, updated_at, csv_name, platform = build_view_model(platform)
-    return render_template("dashboard.html", products=products, updated_at=updated_at, csv_path=csv_name, platform=platform, platforms=PLATFORMS, unlocked=is_unlocked())
+    return render_template("dashboard.html", products=products, updated_at=updated_at, csv_path=csv_name, platform=platform, platforms=PLATFORMS)
 
 
 @app.route("/unlock", methods=["POST"])
 def unlock():
     key = request.form.get("key", "").strip()
     platform = request.form.get("platform", "blinkit")
-    next_page = request.form.get("next", "dashboard")
     if key and key == ADMIN_KEY:
-        session["bench_unlocked"] = True
-    # redirect to desired page keeping platform
-    if next_page == "benchmarks":
-        return redirect(url_for("benchmarks_page", platform=platform))
-    return redirect(url_for("index", platform=platform))
-
-
-@app.route("/lock")
-def lock():
-    session.pop("bench_unlocked", None)
-    platform = request.args.get('platform', 'blinkit')
+        ts = int(time.time())
+        sig = _sign(platform, ts)
+        return redirect(url_for("benchmarks_page", platform=platform, ts=ts, sig=sig))
     return redirect(url_for("index", platform=platform))
 
 
 @app.route("/benchmarks", methods=["GET"])
 def benchmarks_page():
-    if not is_unlocked():
-        # send back to dashboard for unlock
-        platform = request.args.get('platform', 'blinkit')
-        return redirect(url_for("index", platform=platform))
     platform = request.args.get('platform', 'blinkit')
+    ts = request.args.get('ts', '')
+    sig = request.args.get('sig', '')
+    if not _verify_token(platform, ts, sig):
+        return redirect(url_for("index", platform=platform))
     products, updated_at, csv_name, platform = build_view_model(platform)
-    return render_template("benchmarks.html", products=products, updated_at=updated_at, csv_path=csv_name, platform=platform, platforms=PLATFORMS, unlocked=True)
+    return render_template("benchmarks.html", products=products, updated_at=updated_at, csv_path=csv_name, platform=platform, platforms=PLATFORMS, ts=ts, sig=sig)
 
 
 @app.route("/benchmarks/save", methods=["POST"])
 def save_benchmarks_route():
-    if not is_unlocked():
-        platform = request.form.get('platform', 'blinkit')
-        return redirect(url_for("index", platform=platform))
     form = request.form
     platform = form.get('platform', 'blinkit')
+    ts = form.get('ts', '')
+    sig = form.get('sig', '')
+    if not _verify_token(platform, ts, sig):
+        return redirect(url_for("index", platform=platform))
     benchmarks = load_benchmarks()
-    # Expect inputs named as price_name_<index> with a hidden field name_<index>
     for key, value in form.items():
         if key.startswith("price_"):
             name_key = key.replace("price_", "name_")
@@ -158,7 +166,8 @@ def save_benchmarks_route():
                 except Exception:
                     benchmarks[product_name] = value
     save_benchmarks(benchmarks)
-    return redirect(url_for("benchmarks_page", platform=platform))
+    # After save, send back to dashboard (token not persisted)
+    return redirect(url_for("index", platform=platform))
 
 
 @app.route("/export")
@@ -209,7 +218,6 @@ def export():
 
 @app.route("/tasks/run-scrapers", methods=["POST"])
 def run_scrapers_task():
-    # Require admin key via header or form
     key = request.headers.get("X-Admin-Key") or request.form.get("key") or ""
     if key != ADMIN_KEY:
         return jsonify({"ok": False, "error": "unauthorized"}), 401
