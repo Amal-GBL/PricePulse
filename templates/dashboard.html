@@ -3,70 +3,104 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ platforms[platform]['display_name'] }} Pepe – Benchmarks</title>
+    <title>{{ platforms[platform]['display_name'] }} Pepe Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
     <style>
-      .platform-selector { margin-bottom: 16px; display:inline-flex; gap:6px; padding:4px; border:1px solid var(--border); border-radius:12px; background: var(--panel); }
-      .platform-selector a { text-decoration:none; color: var(--muted); padding:8px 12px; border-radius:8px; border:1px solid transparent; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+      /* Subtle, fluid hero */
+      .hero {
+        border-radius: 16px;
+        padding: 28px;
+        background: radial-gradient(1200px 400px at 20% -10%, rgba(59,130,246,0.18), transparent),
+                    radial-gradient(900px 300px at 100% 0%, rgba(34,197,94,0.12), transparent),
+                    var(--panel);
+        border: 1px solid var(--border);
+      }
+      .hero h1 { font-size: 28px; letter-spacing: -0.02em; margin: 0 0 6px; }
+      .sub { color: var(--muted); margin: 0; }
+      .toolbar { display:flex; gap:12px; align-items:center; margin-top: 16px; }
+      .chip { padding: 6px 10px; border-radius: 999px; border:1px solid var(--border); background:#121319; }
+      .platform-selector { margin-bottom: 16px; display: inline-flex; gap:6px; padding:4px; border:1px solid var(--border); border-radius: 12px; background: var(--panel); }
+      .platform-selector a { text-decoration: none; color: var(--muted); padding: 8px 12px; border-radius: 8px; border: 1px solid transparent; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
       .platform-selector a:hover { color: var(--text); border-color: var(--border); background: #0f1320; }
       .platform-selector a.active { color: var(--text); background: #0f1320; border-color: var(--border); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
-      .actions .right { margin-left:auto; }
+      .unlock { display:flex; gap:8px; margin-top:12px; }
+      .unlock input { padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#0e1118; color:var(--text); }
+      .unlock button { padding:8px 12px; }
+      .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-top: 18px; }
+      .card { border:1px solid var(--border); border-radius: 12px; padding: 16px; background: #101218; }
+      .name { font-weight: 600; margin-bottom: 8px; }
+      .row { display:flex; align-items: baseline; gap:10px; }
+      .cur { font-size: 18px; }
+      .bench { color: var(--muted); }
+      .status { margin-left: auto; font-weight: 600; text-transform: uppercase; }
+      .status.above { color: var(--red); }
+      .status.below { color: var(--green); }
+      .status.equal { color: var(--yellow); }
+
+      @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+      @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="platform-selector">
-        {% for key, platform_data in platforms.items() %}
-          <a href="/benchmarks?platform={{ key }}&ts={{ ts }}&sig={{ sig }}" class="{% if key == platform %}active{% endif %}">{{ platform_data['display_name'] }}</a>
+      <div class="hero">
+        <div class="platform-selector">
+          {% for key, platform_data in platforms.items() %}
+            <a href="/?platform={{ key }}" class="{% if key == platform %}active{% endif %}">{{ platform_data['display_name'] }}</a>
+          {% endfor %}
+        </div>
+        <h1>{{ platforms[platform]['display_name'] }} Pepe Listings</h1>
+        {% if csv_path %}
+          <p class="sub">Source: {{ csv_path }} • Updated: {{ updated_at }}</p>
+        {% else %}
+          <p class="sub">No CSV found yet. Run the scraper first.</p>
+        {% endif %}
+        <div class="toolbar">
+          {% if unlocked %}
+            <a class="button" href="/benchmarks?platform={{ platform }}">Manage Benchmarks</a>
+            <a class="button secondary" href="/export?platform={{ platform }}">Export CSV</a>
+            <a class="button secondary" href="/lock?platform={{ platform }}">Lock</a>
+          {% else %}
+            <form class="unlock" method="post" action="/unlock">
+              <input type="password" name="key" placeholder="Enter admin key" required />
+              <input type="hidden" name="platform" value="{{ platform }}" />
+              <input type="hidden" name="next" value="benchmarks" />
+              <button type="submit" class="button">Unlock Benchmarks</button>
+            </form>
+            <a class="button secondary" href="/export?platform={{ platform }}">Export CSV</a>
+          {% endif %}
+          <span class="chip">Total: {{ products|length }}</span>
+          <span class="chip">Above: {{ products|selectattr('status','equalto','above')|list|length }}</span>
+          <span class="chip">Below: {{ products|selectattr('status','equalto','below')|list|length }}</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        {% for p in products %}
+          <div class="card">
+            <div class="name">{{ p.name }}</div>
+            <div class="row">
+              <div class="cur">₹{{ p.current_price }}</div>
+              <div class="bench">Bench: {% if p.benchmark_price %}₹{{ p.benchmark_price }}{% else %}—{% endif %}</div>
+              <div class="status {{ p.status }}">{{ p.status or '—' }}</div>
+            </div>
+            {% if p.diff %}
+              <div class="bench">Diff: {{ p.diff }}</div>
+            {% endif %}
+          </div>
         {% endfor %}
       </div>
-      <h1>{{ platforms[platform]['display_name'] }} Pepe – Benchmarks</h1>
-      {% if csv_path %}
-        <p class="muted">Source: {{ csv_path }} | Updated: {{ updated_at }}</p>
-      {% endif %}
-
-      <form method="post" action="/benchmarks/save">
-        <input type="hidden" name="platform" value="{{ platform }}" />
-        <input type="hidden" name="ts" value="{{ ts }}" />
-        <input type="hidden" name="sig" value="{{ sig }}" />
-        <div class="actions">
-          <button type="submit">Save Benchmarks</button>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Current</th>
-              <th>Benchmark</th>
-              <th>Original</th>
-              <th>Discount</th>
-              <th>Sizes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for p in products %}
-              <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ p.name }}</td>
-                <td>₹{{ p.current_price }}</td>
-                <td>
-                  <input type="hidden" name="name_{{ loop.index }}" value="{{ p.name }}" />
-                  <input type="number" step="0.01" min="0" name="price_{{ loop.index }}" value="{{ p.benchmark_price }}" placeholder="Enter ₹" />
-                </td>
-                <td>₹{{ p.original_price }}</td>
-                <td>{{ p.discount }}</td>
-                <td>{{ p.sizes }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-
-        <div class="actions bottom">
-          <button type="submit">Save Benchmarks</button>
-        </div>
-      </form>
     </div>
+    
+    <script>
+      function changePlatform(platform) {
+        window.location.href = '/?platform=' + platform;
+      }
+    </script>
   </body>
-</html>
+  </html>
+
+
+
+
+
