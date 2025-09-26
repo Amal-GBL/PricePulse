@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: pepe-scraper-app
+    env: python
+    plan: free
+    buildCommand: |
+      pip install -r requirements.txt
+      python -m playwright install chromium
+    startCommand: gunicorn -w 2 -b 0.0.0.0:10000 app:app
+    envVars:
+      - key: FLASK_SECRET
+        generateValue: true
+      - key: ADMIN_KEY
+        sync: false
+      - key: PYTHON_BIN
+        value: python
+
+cronJobs:
+  - name: hourly-scrape
+    schedule: "0 * * * *"
+    command: |
+      curl -s -X POST -H "X-Admin-Key: $ADMIN_KEY" $RENDER_EXTERNAL_URL/tasks/run-scrapers

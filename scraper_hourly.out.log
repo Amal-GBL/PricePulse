@@ -1,0 +1,34 @@
+[INFO] Starting all scrapers at 2025-09-26T22:20:54
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/blinkit_scraper.py
+[ERROR] blinkit scraper failed with exit code 1
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/instamart.py
+[ERROR] instamart scraper failed with exit code 1
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/zepto_scraper.py
+[ERROR] zepto scraper failed with exit code 1
+[DONE] Completed with errors
+Launching headless browser...
+Opening homepage to set location...
+Attempting to set pincode to 560012...
+Pincode entered.
+Opening URL: https://blinkit.com/dc/?collection_filters=W3siYnJhbmRfaWQiOlsxNjIyOF19XQ%3D%3D&collection_name=Pepe+Jeans+Innerfashion
+Scrolling to load all products (virtualized-aware)...
+Scroll round 1: cards visible = 48
+  + Added 44 new products; total unique = 44
+Scroll round 2: cards visible = 48
+Scroll round 3: cards visible = 48
+Scroll round 4: cards visible = 48
+Scroll round 5: cards visible = 48
+No new products appearing after several rounds.
+Extracting product data...
+Scraped 44 unique products. Saved to blinkit_pepe_2025-09-26.csv
+Scraped 50 products.
+Opening Zepto homepage...
+Selecting location...
+[INFO] Starting all scrapers at 2025-09-26T22:21:29
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/blinkit_scraper.py
+[OK] blinkit scraper completed
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/instamart.py
+[OK] instamart scraper completed
+[RUN] /Users/mac/Documents/scraper/venv/bin/python /Users/mac/Documents/scraper/zepto_scraper.py
+[ERROR] zepto scraper failed with exit code 1
+[DONE] Completed with errors

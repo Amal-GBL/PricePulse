@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ platforms[platform]['display_name'] }} Pepe – Benchmarks</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+      .platform-selector { margin-bottom: 16px; display:inline-flex; gap:6px; padding:4px; border:1px solid var(--border); border-radius:12px; background: var(--panel); }
+      .platform-selector a { text-decoration:none; color: var(--muted); padding:8px 12px; border-radius:8px; border:1px solid transparent; transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; }
+      .platform-selector a:hover { color: var(--text); border-color: var(--border); background: #0f1320; }
+      .platform-selector a.active { color: var(--text); background: #0f1320; border-color: var(--border); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04); }
+      .actions .right { margin-left:auto; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="platform-selector">
+        {% for key, platform_data in platforms.items() %}
+          <a href="/benchmarks?platform={{ key }}" class="{% if key == platform %}active{% endif %}">{{ platform_data['display_name'] }}</a>
+        {% endfor %}
+      </div>
+      <h1>{{ platforms[platform]['display_name'] }} Pepe – Benchmarks</h1>
+      {% if csv_path %}
+        <p class="muted">Source: {{ csv_path }} | Updated: {{ updated_at }}</p>
+      {% endif %}
+      <div class="actions" style="display:flex; gap:8px; align-items:center;">
+        <a class="button secondary" href="/?platform={{ platform }}">← Back to Dashboard</a>
+        <a class="button secondary right" href="/lock?platform={{ platform }}">Lock</a>
+      </div>
+
+      <form method="post" action="/benchmarks/save">
+        <input type="hidden" name="platform" value="{{ platform }}" />
+        <div class="actions">
+          <button type="submit">Save Benchmarks</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Current</th>
+              <th>Benchmark</th>
+              <th>Original</th>
+              <th>Discount</th>
+              <th>Sizes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ p.name }}</td>
+                <td>₹{{ p.current_price }}</td>
+                <td>
+                  <input type="hidden" name="name_{{ loop.index }}" value="{{ p.name }}" />
+                  <input type="number" step="0.01" min="0" name="price_{{ loop.index }}" value="{{ p.benchmark_price }}" placeholder="Enter ₹" />
+                </td>
+                <td>₹{{ p.original_price }}</td>
+                <td>{{ p.discount }}</td>
+                <td>{{ p.sizes }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="actions bottom">
+          <button type="submit">Save Benchmarks</button>
+        </div>
+      </form>
+    </div>
+  </body>
+  </html>
+
+
+
+
+
+
