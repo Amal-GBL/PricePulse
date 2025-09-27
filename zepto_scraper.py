@@ -18,7 +18,7 @@ def scrape_zepto_pepe():
 
 
 	with sync_playwright() as p:
-		browser = p.chromium.launch(headless=False, slow_mo=400)
+		browser = p.chromium.launch(headless=True, slow_mo=400)
 		page = browser.new_page()
 		print("Opening Zepto homepage...")
 		page.goto(url)
