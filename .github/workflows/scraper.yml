@@ -1,34 +1,44 @@
-name: Run scrapers
+name: Run Scrapers 
 
 on:
   schedule:
-    - cron: "0 * * * *"   # every hour (UTC)
+    - cron: "0 * * * *"   # daily at 2 AM UTC
   workflow_dispatch:
 
 jobs:
-  run-scrapers:
+  scrape:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Set up Python
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Setup Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
+      # 3. Install dependencies
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright
+          playwright install
 
-      - name: Install Playwright browsers
-        run: playwright install
-
-      - name: Run scrapers
+      # 4. Run scrapers
+      - name: Run all scrapers
         run: python run_all_scrapers.py
 
-      - name: Commit updated CSVs
+      # 5. Commit and push CSVs
+      - name: Commit and push updated CSVs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add *.csv
-          git commit -m "Auto-update scraped CSVs" || echo "No changes to commit"
-          git push
+          git diff-index --quiet HEAD || git commit -m "Auto-update scraped CSVs"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
