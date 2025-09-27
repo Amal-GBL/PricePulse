@@ -1,43 +1,43 @@
 #!/usr/bin/env python3
+import os
 from datetime import datetime
+import traceback
+
+# Ensure Playwright installs system-wide browsers (important for CI)
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
 any_failed = False
-
 print(f"[INFO] Starting all scrapers at {datetime.now().isoformat(timespec='seconds')}")
 
-# ------------- Blinkit -------------
-try:
-    import blinkit_scraper
+SCRAPERS = [
+    ("blinkit", "blinkit_scraper", "scrape_blinkit_pepe"),
+    ("instamart", "instamart", "scrape_instamart_pepe"),
+    ("zepto", "zepto_scraper", "scrape_zepto_pepe"),
+]
 
-    print("[RUN] blinkit scraper")
-    blinkit_scraper.scrape_blinkit_pepe()  # your existing function
-    print("[OK] blinkit scraper completed")
-except Exception as e:
-    print(f"[ERROR] blinkit scraper failed: {e}")
-    any_failed = True
+# Optional: Save all CSVs in current working directory
+OUTPUT_DIR = os.getcwd()
+print(f"[INFO] Output CSVs will be saved in: {OUTPUT_DIR}")
 
-# ------------- Instamart -------------
-try:
-    import instamart
+for name, module_name, func_name in SCRAPERS:
+    try:
+        print(f"[RUN] {name} scraper")
 
-    print("[RUN] instamart scraper")
-    instamart.scrape_instamart_pepe()
-    print("[OK] instamart scraper completed")
-except Exception as e:
-    print(f"[ERROR] instamart scraper failed: {e}")
-    any_failed = True
+        # Import the module dynamically
+        module = __import__(module_name)
 
-# ------------- Zepto -------------
-try:
-    import zepto_scraper
+        # Call the scraper function
+        scraper_func = getattr(module, func_name)
+        scraper_func()  # Assumes each scraper writes its own CSV
 
-    print("[RUN] zepto scraper")
-    zepto_scraper.scrape_zepto_pepe()
-    print("[OK] zepto scraper completed")
-except Exception as e:
-    print(f"[ERROR] zepto scraper failed: {e}")
-    any_failed = True
+        print(f"[OK] {name} scraper completed")
 
+    except Exception as e:
+        any_failed = True
+        print(f"[ERROR] {name} scraper failed: {e}")
+        traceback.print_exc()
+
+print(f"[INFO] All scrapers finished at {datetime.now().isoformat(timespec='seconds')}")
 if any_failed:
     print("[DONE] Completed with errors")
     exit(1)
