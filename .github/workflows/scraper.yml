@@ -40,7 +40,7 @@ jobs:
           wget curl unzip \
           libatk-bridge2.0-0 libgtk-3-bin libxss1 libx11-xcb1 libxcb-dri3-0 libdrm2 libatspi2.0-0 \
           ca-certificates fonts-noto-color-emoji \
-          libxfixes3 libxi6 libxinerama1 libxcursor1 libxtst6 libxrender1 libgbm-dev libpangox-1.0-0
+          libxfixes3 libxi6 libxinerama1 libxcursor1 libxtst6 libxrender1 libgbm-dev
 
       # 4. Run all scrapers
       - name: Run all scrapers
