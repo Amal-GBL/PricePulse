@@ -10,7 +10,7 @@ try:
     import blinkit_scraper
 
     print("[RUN] blinkit scraper")
-    blinkit_scraper.scrape_blinkit_pepe()  # your existing function
+    blinkit_scraper.scrape_blinkit_pepe()  # updated scraper
     print("[OK] blinkit scraper completed")
 except Exception as e:
     print(f"[ERROR] blinkit scraper failed: {e}")
@@ -21,7 +21,7 @@ try:
     import instamart
 
     print("[RUN] instamart scraper")
-    instamart.scrape_instamart_pepe()
+    instamart.scrape_instamart_pepe()  # updated scraper
     print("[OK] instamart scraper completed")
 except Exception as e:
     print(f"[ERROR] instamart scraper failed: {e}")
@@ -32,7 +32,7 @@ try:
     import zepto_scraper
 
     print("[RUN] zepto scraper")
-    zepto_scraper.scrape_zepto_pepe()
+    zepto_scraper.scrape_zepto_pepe()  # updated scraper
     print("[OK] zepto scraper completed")
 except Exception as e:
     print(f"[ERROR] zepto scraper failed: {e}")
