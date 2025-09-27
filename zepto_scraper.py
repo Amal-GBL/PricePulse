@@ -166,7 +166,7 @@ def scrape_zepto_pepe():
 
         # Step 6: Save CSV
         products = list(collected.values())
-        filename = f"zepto_pepe_{date.today().isoformat()}.csv"
+        filename = "zepto_data.csv"
         with open(filename, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=["discount", "name", "unit", "current_price", "original_price"])
             writer.writeheader()
