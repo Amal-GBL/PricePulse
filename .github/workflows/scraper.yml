@@ -1,8 +1,8 @@
-name: Run Scrapers 
+name: Run Scrapers
 
 on:
   schedule:
-    - cron: "0 * * * *"   # daily at 2 AM UTC
+    - cron: "0 * * * *"   # every hour at minute 0 UTC
   workflow_dispatch:
 
 jobs:
@@ -13,6 +13,8 @@ jobs:
       # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true   # important for git push
 
       # 2. Setup Python
       - name: Setup Python
@@ -28,11 +30,11 @@ jobs:
           pip install playwright
           playwright install
 
-      # 4. Run scrapers
+      # 4. Run all scrapers
       - name: Run all scrapers
         run: python run_all_scrapers.py
 
-      # 5. Commit and push CSVs
+      # 5. Commit and push updated CSVs
       - name: Commit and push updated CSVs
         run: |
           git config user.name "github-actions[bot]"
