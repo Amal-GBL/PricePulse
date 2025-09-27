@@ -116,7 +116,7 @@ def scrape_instamart_pepe():
 
         # --- Save to CSV
         keys = ["name", "unit", "current_price", "original_price", "discount"]
-        with open("pepe_instamart.csv", "w", newline="", encoding="utf-8") as f:
+        with open("instamart_data.csv", "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=keys)
             writer.writeheader()
             writer.writerows(products)
