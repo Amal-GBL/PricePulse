@@ -1,0 +1,12 @@
+name: Run test
+on:
+  schedule:
+    - cron: '0 * * * *'  # every hour
+  workflow_dispatch:       # lets you run manually too
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run scraper
+        run: python run_all_scrapers.py
