@@ -1,90 +1,90 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 from datetime import date
 import csv
 import re
 import time
 
-
 def clean_price(price_str):
-	"""Remove currency symbols and commas, return as number or NA."""
-	if not price_str or price_str == "NA":
-		return "NA"
-	price = re.sub(r"[^\d]", "", price_str)
-	return price if price else "NA"
-
+    """Remove currency symbols and commas, return as number or NA."""
+    if not price_str or price_str == "NA":
+        return "NA"
+    price = re.sub(r"[^\d]", "", price_str)
+    return price if price else "NA"
 
 def scrape_zepto_pepe():
-	url = "https://www.zeptonow.com/"
+    url = "https://www.zeptonow.com/"
 
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(
+            viewport={"width": 1280, "height": 800},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+        )
 
-	with sync_playwright() as p:
-		browser = p.chromium.launch(headless=True, slow_mo=400)
-		page = browser.new_page()
-		print("Opening Zepto homepage...")
-		page.goto(url)
-		time.sleep(1)
+        print("Opening Zepto homepage...")
+        page.goto(url, wait_until="networkidle")
+        time.sleep(2)
 
+        # Step 1: Select location
+        print("Selecting location...")
+        try:
+            page.wait_for_selector("button[aria-label='Select Location']", timeout=60000, state="visible")
+            page.click("button[aria-label='Select Location']")
+            time.sleep(2)
+            page.wait_for_selector("input[placeholder='Search a new address']", timeout=30000, state="visible")
+            page.fill("input[placeholder='Search a new address']", "560012")
+            time.sleep(2)
+            page.click("div.ck03O3 div.c4ZmYS")
+            time.sleep(2)
+            page.click("button[data-testid='location-confirm-btn']")
+            print("Location set to 560012")
+            time.sleep(2)
+        except TimeoutError:
+            print("Location selection failed or timed out. Proceeding anyway...")
 
-		# Step 1: Select location
-		print("Selecting location...")
-		page.wait_for_selector("button[aria-label='Select Location']")
-		page.click("button[aria-label='Select Location']")
-		time.sleep(2)
-		page.wait_for_selector("input[placeholder='Search a new address']")
-		page.fill("input[placeholder='Search a new address']", "560012")
-		time.sleep(2)
-		page.click("div.ck03O3 div.c4ZmYS")
-		time.sleep(2)
-		page.click("button[data-testid='location-confirm-btn']")
-		print("Location set to 560012")
-		time.sleep(2)
+        # Step 2: Search "pepe"
+        print("Searching for 'Pepe Jeans'...")
+        try:
+            page.wait_for_selector("span [data-testid='searchBar']", timeout=30000)
+            page.click("span [data-testid='searchBar']")
+            time.sleep(2)
+            page.wait_for_selector("input[placeholder='Search for over 5000 products']", timeout=30000)
+            page.fill("input[placeholder='Search for over 5000 products']", "pepe")
+            time.sleep(2)
+            page.click("li[id^='pepe jeans']")
+            time.sleep(2)
+            print("Search executed")
+        except TimeoutError:
+            print("Search bar interaction failed.")
 
+        # Step 3: Open first product and navigate to brand catalogue
+        print("Opening first Pepe Jeans product...")
+        try:
+            page.wait_for_selector("img[alt^='Pepe Jeans']", timeout=30000)
+            page.click("img[alt^='Pepe Jeans']")
+            time.sleep(2)
 
-		# Step 2: Search "pepe"
-		print("Searching for 'Pepe Jeans'...")
-		page.wait_for_selector("span [data-testid='searchBar']")
-		page.click("span [data-testid='searchBar']")
-		time.sleep(2)
-		page.wait_for_selector("input[placeholder='Search for over 5000 products']")
-		page.fill("input[placeholder='Search for over 5000 products']", "pepe")
-		time.sleep(2)
-		page.click("li[id^='pepe jeans']")
-		time.sleep(2)
-		print("Search executed")
+            print("Navigating to Pepe Jeans catalogue page...")
+            page.wait_for_selector("p.font-medium", timeout=30000)
+            page.locator("p.font-medium", has_text="Pepe Jeans").click()
+            time.sleep(2)
+            print("Navigated to Pepe Jeans catalogue page")
+        except TimeoutError:
+            print("Failed to open product/brand page.")
 
+        # Step 4: Scroll and collect products
+        print("Scrolling to load all products...")
+        collected = {}
+        last_card_count = 0
+        stable_rounds = 0
+        max_stable_rounds = 6
+        total_rounds = 0
+        max_total_rounds = 120
 
-		# Step 3: Click the first product image
-		print("Opening first Pepe Jeans product...")
-		page.wait_for_selector("img[alt^='Pepe Jeans']")
-		page.click("img[alt^='Pepe Jeans']")
-		time.sleep(2)
-
-
-		# Step 4: Click the "Pepe Jeans" brand link inside product page
-		print("Navigating to Pepe Jeans catalogue page...")
-		page.wait_for_selector("p.font-medium")
-		page.locator("p.font-medium", has_text="Pepe Jeans").click()
-		time.sleep(2)
-		print("Navigated to Pepe Jeans catalogue page")
-
-
-		# Step 5: Scroll to load all products
-		print("Scrolling to load all products...")
-		page.wait_for_selector("div.c5SZXs.ccdFPa", timeout=15000)  # wait for first batch
-
-
-		collected = {}
-		last_card_count = 0
-		stable_rounds = 0
-		max_stable_rounds = 6
-		total_rounds = 0
-		max_total_rounds = 120
-
-		# Container-aware scrolling routine
-		while total_rounds < max_total_rounds:
-			total_rounds += 1
-			info = page.evaluate(
-				"""
+        while total_rounds < max_total_rounds:
+            total_rounds += 1
+            info = page.evaluate(
+                """
 (() => {
   const containerCandidates = [
     document.querySelector('div.c5SZXs.ccdFPa')?.parentElement,
@@ -102,88 +102,78 @@ def scrape_zepto_pepe():
   }
   return { sh: 0, st: 0, ch: 0 };
 })()
-				"""
-			)
-			time.sleep(0.8)
+                """
+            )
+            time.sleep(0.8)
 
-			# Opportunistically click any load more buttons
-			for sel in [
-				"button:has-text('Show more')",
-				"button:has-text('Load more')",
-				"button:has-text('See more')",
-				"[data-test-id='load-more']",
-			]:
-				try:
-					btn = page.query_selector(sel)
-					if btn:
-						btn.click()
-						time.sleep(0.4)
-				except Exception:
-					pass
+            for sel in [
+                "button:has-text('Show more')",
+                "button:has-text('Load more')",
+                "button:has-text('See more')",
+                "[data-test-id='load-more']",
+            ]:
+                try:
+                    btn = page.query_selector(sel)
+                    if btn:
+                        btn.click()
+                        time.sleep(0.4)
+                except Exception:
+                    pass
 
-			cards = page.query_selector_all("div.c5SZXs.ccdFPa")
-			card_count = len(cards)
-			print(f"Scroll round {total_rounds}: cards visible = {card_count}, sh={info.get('sh')}, st={info.get('st')}")
+            cards = page.query_selector_all("div.c5SZXs.ccdFPa")
+            card_count = len(cards)
+            print(f"Scroll round {total_rounds}: cards visible = {card_count}, sh={info.get('sh')}, st={info.get('st')}")
 
-			# Periodically ensure last card is fully in view
-			if cards:
-				try:
-					page.evaluate("el => el.scrollIntoView({behavior: 'instant', block: 'end'})", cards[-1])
-				except Exception:
-					pass
+            if cards:
+                try:
+                    page.evaluate("el => el.scrollIntoView({behavior: 'instant', block: 'end'})", cards[-1])
+                except Exception:
+                    pass
 
-			if card_count > last_card_count:
-				stable_rounds = 0
-				last_card_count = card_count
-			else:
-				stable_rounds += 1
+            if card_count > last_card_count:
+                stable_rounds = 0
+                last_card_count = card_count
+            else:
+                stable_rounds += 1
 
-			if stable_rounds >= max_stable_rounds:
-				print("No new products appearing after several rounds.")
-				break
+            if stable_rounds >= max_stable_rounds:
+                print("No new products appearing after several rounds.")
+                break
 
+        # Step 5: Collect product info
+        print("Collecting product data...")
+        cards = page.query_selector_all("div.c5SZXs.ccdFPa")
+        for card in cards:
+            try:
+                name = card.query_selector('div[data-slot-id="ProductName"] span').inner_text().strip() if card.query_selector('div[data-slot-id="ProductName"] span') else "NA"
+                if not name.startswith("Pepe"):
+                    continue
 
-		# Step 6: Collect product info (only names starting with "Pepe")
-		print("Collecting product data...")
-		cards = page.query_selector_all("div.c5SZXs.ccdFPa")
-		for card in cards:
-			try:
-				name = card.query_selector('div[data-slot-id="ProductName"] span').inner_text().strip() if card.query_selector('div[data-slot-id="ProductName"] span') else "NA"
-				if not name.startswith("Pepe"):
-					continue  # skip products not starting with "Pepe"
+                unit = card.query_selector('div[data-slot-id="PackSize"] span').inner_text().strip() if card.query_selector('div[data-slot-id="PackSize"] span') else "1 unit"
+                current_price = clean_price(card.query_selector('div[data-slot-id="Price"] p:first-child').inner_text() if card.query_selector('div[data-slot-id="Price"] p:first-child') else "NA")
+                original_price = clean_price(card.query_selector('div[data-slot-id="Price"] p:last-child').inner_text() if card.query_selector('div[data-slot-id="Price"] p:last-child') else "NA")
+                discount = card.query_selector('div.c5aJJW span:last-child').inner_text().strip() if card.query_selector('div.c5aJJW span:last-child') else "NA"
 
-				unit = card.query_selector('div[data-slot-id="PackSize"] span').inner_text().strip() if card.query_selector('div[data-slot-id="PackSize"] span') else "1 unit"
-				current_price = clean_price(card.query_selector('div[data-slot-id="Price"] p:first-child').inner_text() if card.query_selector('div[data-slot-id="Price"] p:first-child') else "NA")
-				original_price = clean_price(card.query_selector('div[data-slot-id="Price"] p:last-child').inner_text() if card.query_selector('div[data-slot-id="Price"] p:last-child') else "NA")
-				discount = card.query_selector('div.c5aJJW span:last-child').inner_text().strip() if card.query_selector('div.c5aJJW span:last-child') else "NA"
+                collected[name] = {
+                    "discount": discount,
+                    "name": name,
+                    "unit": unit,
+                    "current_price": current_price,
+                    "original_price": original_price
+                }
+            except Exception as e:
+                print(f"Error collecting a product: {e}")
 
-				collected[name] = {
-					"discount": discount,
-					"name": name,
-					"unit": unit,
-					"current_price": current_price,
-					"original_price": original_price
-				}
-			except Exception as e:
-				print(f"Error collecting a product: {e}")
+        # Step 6: Save CSV
+        products = list(collected.values())
+        filename = f"zepto_pepe_{date.today().isoformat()}.csv"
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["discount", "name", "unit", "current_price", "original_price"])
+            writer.writeheader()
+            writer.writerows(products)
 
-
-
-		# Step 7: Save CSV
-		products = list(collected.values())
-		filename = f"zepto_pepe_{date.today().isoformat()}.csv"
-		with open(filename, "w", newline="", encoding="utf-8") as f:
-			writer = csv.DictWriter(f, fieldnames=["discount", "name", "unit", "current_price", "original_price"])
-			writer.writeheader()
-			writer.writerows(products)
-
-
-		print(f"Scraped {len(products)} unique products. Saved to {filename}")
-		browser.close()
-
+        print(f"Scraped {len(products)} unique products. Saved to {filename}")
+        browser.close()
 
 if __name__ == "__main__":
-	scrape_zepto_pepe()
-
-
-
+    scrape_zepto_pepe()
