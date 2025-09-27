@@ -338,7 +338,7 @@ def scrape_blinkit_pepe():
             except Exception:
                 pass
 
-    filename = f"blinkit_pepe_{date.today().isoformat()}.csv"
+    filename = "blinkit_data.csv"
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["name", "current_price", "original_price", "discount", "sizes"])
         writer.writeheader()
