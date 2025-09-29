@@ -26,7 +26,7 @@ jobs:
           # Install Chromium + system deps
           playwright install --with-deps chromium
 
-      - name: Run scrapers with xvfb
+      - name: Run scrapers
         run: |
           python run_all_scrapers.py
 
