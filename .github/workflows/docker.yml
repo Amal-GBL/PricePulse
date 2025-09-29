@@ -1,0 +1,46 @@
+name: Run Scrapers with docker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 * * * *"   # every hour at minute 0 UTC
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: true  # needed for git push
+
+      # 2. Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # 3. Build Docker image
+      - name: Build Docker image
+        run: docker build -t pricepulse-scrapers .
+
+      # 4. Run scrapers
+      - name: Run all scrapers
+        run: docker run --rm -v ${{ github.workspace }}:/app pricepulse-scrapers
+
+      # 5. Configure Git
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # 6. Commit and push updated CSVs
+      - name: Commit CSVs
+        run: |
+          git add *.csv
+          if ! git diff --staged --quiet; then
+            git commit -m "Update scraper CSVs [skip ci]"
+            git push
+          else
+            echo "No CSV updates"
+          fi
