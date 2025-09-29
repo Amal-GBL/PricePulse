@@ -59,8 +59,8 @@ def scrape_blinkit_pepe():
             time.sleep(3)
 
             # Save debug screenshot + HTML in case products fail
-            debug_screenshot = "/app/blinkit_debug.png"
-            debug_html = "/app/blinkit_debug.html"
+            debug_screenshot = "blinkit_debug.png"
+            debug_html = "blinkit_debug.html"
             page.screenshot(path=debug_screenshot, full_page=True)
             with open(debug_html, "w", encoding="utf-8") as f:
                 f.write(page.content())
