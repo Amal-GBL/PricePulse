@@ -19,7 +19,7 @@ def scrape_blinkit_pepe():
 
    with sync_playwright() as p:
        print("Launching headless browser...")
-       browser = p.chromium.launch(headless=False)
+       browser = p.chromium.launch(headless=True)
        context = browser.new_context(
            geolocation={"latitude": 28.6139, "longitude": 77.2090},  # New Delhi
            locale="en-IN",
