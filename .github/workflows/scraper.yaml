@@ -28,7 +28,7 @@ jobs:
 
       - name: Run scrapers with xvfb
         run: |
-          xvfb-run -a python run_all_scrapers.py
+          python run_all_scrapers.py
 
       - name: Commit and push updated CSVs
         run: |
