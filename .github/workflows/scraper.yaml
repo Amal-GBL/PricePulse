@@ -2,7 +2,7 @@ name: Run Scrapers
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
@@ -13,29 +13,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+      - name: Build Docker image
+        run: docker build -t pricepulse-scrapers .
 
-      - name: Install dependencies
+      - name: Run scrapers in container
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install playwright
-          # Install Chromium + system deps
-          playwright install --with-deps chromium
+          docker run \
+            -e GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+            pricepulse-scrapers
 
-      - name: Run scrapers
-        run: |
-          python run_all_scrapers.py
-
-      - name: Commit and push updated CSVs
+      - name: Commit updated CSVs
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add *.csv
           git diff-index --quiet HEAD || git commit -m "Auto-update scraped CSVs"
-          git push https://x-access-token:${GITHUB_TOKEN}@github.com/Amal-GBL/PricePulse.git main
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Amal-GBL/PricePulse.git main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
