@@ -1,3 +1,15 @@
+from playwright.sync_api import sync_playwright, TimeoutError
+import csv
+import re
+import time
+
+def clean_price(price_str):
+    """Remove currency symbols and commas, return as number or NA."""
+    if not price_str or price_str == "NA":
+        return "NA"
+    price = re.sub(r"[^\d]", "", price_str)
+    return price if price else "NA"
+
 def scrape_zepto_pepe(output_file="zepto_data.csv"):
     url = "https://www.zeptonow.com/"
 
@@ -151,15 +163,18 @@ def scrape_zepto_pepe(output_file="zepto_data.csv"):
             except Exception as e:
                 print(f"Error collecting a product: {e}")
 
-        # Step 6: Save CSV only if products scraped
+                # Step 6: Save CSV only if products were scraped
         products = list(collected.values())
-        if products:
+        if products:  # <-- NEW check
             with open(output_file, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=["discount", "name", "unit", "current_price", "original_price"])
                 writer.writeheader()
                 writer.writerows(products)
             print(f"Scraped {len(products)} unique products. Saved to {output_file}")
         else:
-            print("No products scraped. CSV not updated.")
+            print("No products scraped. CSV file not modified.")
 
-        browser.close()
+
+
+if __name__ == "__main__":
+    scrape_zepto_pepe()
