@@ -1,3 +1,16 @@
+from playwright.sync_api import sync_playwright
+from datetime import date
+import csv
+import re
+import time
+
+def clean_price(price_str):
+    """Remove currency symbols and commas, return as number or NA."""
+    if not price_str or price_str == "NA":
+        return "NA"
+    price = re.sub(r"[^\d]", "", price_str)
+    return price if price else "NA"
+
 def scrape_blinkit_pepe(output_file=None):
     url = "https://blinkit.com/dc/?collection_filters=W3siYnJhbmRfaWQiOlsxNjIyOF19XQ%3D%3D&collection_name=Pepe+Jeans+Innerfashion"
     if output_file is None:
@@ -64,19 +77,23 @@ def scrape_blinkit_pepe(output_file=None):
             collected = {}
 
             def parse_card(card):
+                # Product name
                 name_tag = card.query_selector("div.tw-text-300.tw-font-semibold") or card.query_selector("[data-test-id='product-name']")
                 name = (name_tag.inner_text().strip() if name_tag else "NA")
                 if name == "NA":
                     return None, None
 
+                # Prices
                 cur_tag = card.query_selector("div.tw-text-200.tw-font-semibold") or card.query_selector("[data-test-id='current-price']")
                 orig_tag = card.query_selector("div.tw-text-200.tw-font-regular") or card.query_selector("[data-test-id='original-price']")
                 cur_price = clean_price(cur_tag.inner_text().strip()) if cur_tag else "NA"
                 orig_price = clean_price(orig_tag.inner_text().strip()) if orig_tag else "NA"
 
+                # Discount
                 discount_tag = card.query_selector("div.tw-text-050") or card.query_selector("[data-test-id='discount']")
                 discount = discount_tag.inner_text().strip() if discount_tag else "NA"
 
+                # Sizes
                 sizes_tag = card.query_selector("div.tw-font-semibold:has-text('Size')") or card.query_selector("[data-test-id='size']")
                 sizes = sizes_tag.inner_text().replace("ADD", "").strip() if sizes_tag else "NA"
 
@@ -110,20 +127,26 @@ def scrape_blinkit_pepe(output_file=None):
                 if stable_rounds >= max_stable_rounds or total_rounds >= max_total_rounds:
                     break
 
+                # Scroll page down
                 page.evaluate("window.scrollBy(0, window.innerHeight * 0.8)")
                 time.sleep(1)
 
-            # Only save if products are scraped
+                        # Save CSV only if products were scraped
             products = list(collected.values())
-            if products:
+            if products:  # <-- NEW check
                 with open(output_file, "w", newline="", encoding="utf-8") as f:
                     writer = csv.DictWriter(f, fieldnames=["name", "current_price", "original_price", "discount", "sizes"])
                     writer.writeheader()
                     writer.writerows(products)
                 print(f"Scraped {len(products)} unique products. Saved to {output_file}")
             else:
-                print("No products scraped. CSV not updated.")
+                print("No products scraped. CSV file not modified.")
+
 
         finally:
             context.close()
             browser.close()
+
+
+if __name__ == "__main__":
+    scrape_blinkit_pepe()
